@@ -1,235 +1,225 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import "./App.css";
+
+const MAX_PREVIEW = 140000;
 
 export default function App() {
-  const [email, setEmail] = useState("");
+  const [loadedFile, setLoadedFile] = useState(null);
+  const [viewerData, setViewerData] = useState(null);
+  const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const filteredRows = useMemo(() => {
+    if (!viewerData?.topTags) {
+      return [];
+    }
+
+    if (!search.trim()) {
+      return viewerData.topTags;
+    }
+
+    const query = search.toLowerCase();
+    return viewerData.topTags.filter((item) => item.tag.toLowerCase().includes(query));
+  }, [search, viewerData]);
+
+  const onFileChange = async (file) => {
+    if (!file) return;
+
+    setLoadedFile(file);
+    setError("");
+    setViewerData(null);
+    setSearch("");
+    setIsLoading(true);
+
+    try {
+      const data = await parseDatasmithFile(file);
+      setViewerData(data);
+    } catch (fileError) {
+      setError(fileError instanceof Error ? fileError.message : "Unable to parse the selected file.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background:
-          "radial-gradient(circle at 20% 20%, rgba(120,60,255,0.25) 0%, rgba(0,0,0,1) 60%)",
-        color: "#fff",
-        fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Inter', sans-serif",
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
-      {/* Hero */}
-      <header style={{ padding: "2rem 1.5rem 1rem", textAlign: "center" }}>
-        <div
-          style={{
-            fontSize: "0.8rem",
-            letterSpacing: "0.1em",
-            textTransform: "uppercase",
-            opacity: 0.7,
-          }}
-        >
-          Fabrication • Architecture • Light
-        </div>
-
-        <h1
-          style={{
-            fontSize: "clamp(2rem, 2.5vw, 3rem)",
-            fontWeight: 600,
-            lineHeight: 1.1,
-            marginTop: "0.5rem",
-            background:
-              "linear-gradient(90deg, rgb(255,255,255) 0%, rgb(150,120,255) 50%, rgb(0,200,255) 100%)",
-            WebkitBackgroundClip: "text",
-            color: "transparent",
-          }}
-        >
-          We build impossible objects
-        </h1>
-
-        <p
-          style={{
-            maxWidth: "650px",
-            margin: "1rem auto 0",
-            fontSize: "1rem",
-            lineHeight: 1.5,
-            color: "rgba(255,255,255,0.7)",
-          }}
-        >
-          High-end sculptures, laser-cut metal, custom lighting,
-          and interactive installations for luxury spaces,
-          museums, and nightlife. Designed in Miami. Deployed worldwide.
+    <main className="app-shell">
+      <section className="panel hero">
+        <p className="eyebrow">Datasmith Inspector</p>
+        <h1>.datasmith online viewer</h1>
+        <p>
+          Upload a <code>.datasmith</code> / <code>.udatasmith</code> file to inspect XML structure,
+          scene metadata, and dominant node types right in your browser.
         </p>
-      </header>
 
-      {/* Feature Grid */}
-      <section
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(min(260px,100%),1fr))",
-          gap: "1rem",
-          padding: "1rem 1.5rem",
-          maxWidth: "1200px",
-          width: "100%",
-          margin: "0 auto",
-        }}
-      >
-        <FeatureCard
-          title="Large-Scale Metal"
-          body="CNC tube + sheet laser. Mirror polish stainless. Architectural frames."
-          badge="Precision"
-        />
-        <FeatureCard
-          title="Light & Motion"
-          body="Kinetic light sculpture, mapped lasers, DMX, responsive control."
-          badge="Energy"
-        />
-        <FeatureCard
-          title="Install Team"
-          body="Design, fabrication, crating, delivery, on-site install. End-to-end."
-          badge="Turnkey"
-        />
-      </section>
-
-      {/* Email capture / CTA */}
-      <section
-        style={{
-          padding: "2rem 1.5rem 3rem",
-          textAlign: "center",
-          marginTop: "auto",
-        }}
-      >
-        <div
-          style={{
-            fontSize: "0.8rem",
-            textTransform: "uppercase",
-            letterSpacing: "0.08em",
-            opacity: 0.6,
-            marginBottom: "0.5rem",
-          }}
-        >
-          Get the capabilities deck
-        </div>
-
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            alert(`We'll follow up at: ${email}`);
-          }}
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "0.75rem",
-            maxWidth: "360px",
-            width: "100%",
-            margin: "0.5rem auto 0",
-          }}
-        >
+        <label className="upload-card" htmlFor="file-upload">
           <input
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@brand.com"
-            style={{
-              background: "rgba(255,255,255,0.07)",
-              border: "1px solid rgba(255,255,255,0.2)",
-              borderRadius: "10px",
-              padding: "0.9rem 1rem",
-              fontSize: "0.95rem",
-              color: "#fff",
-              outline: "none",
-            }}
+            id="file-upload"
+            type="file"
+            accept=".datasmith,.udatasmith,.xml,text/xml,application/xml"
+            onChange={(event) => onFileChange(event.target.files?.[0])}
           />
-          <button
-            type="submit"
-            style={{
-              background:
-                "linear-gradient(90deg, rgb(120,60,255) 0%, rgb(0,200,255) 100%)",
-              border: "none",
-              borderRadius: "10px",
-              padding: "0.9rem 1rem",
-              fontSize: "0.95rem",
-              fontWeight: 600,
-              color: "#000",
-              cursor: "pointer",
-            }}
-          >
-            Send me the deck →
-          </button>
-        </form>
+          <span className="upload-title">Choose file</span>
+          <span className="upload-subtitle">No server upload • local parse only</span>
+          {loadedFile ? (
+            <span className="upload-subtitle uploaded">
+              Selected: {loadedFile.name} ({formatBytes(loadedFile.size)})
+            </span>
+          ) : null}
+        </label>
 
-        <div
-          style={{
-            fontSize: "0.7rem",
-            color: "rgba(255,255,255,0.4)",
-            marginTop: "0.75rem",
-          }}
-        >
-          No spam. Just examples that close clients.
-        </div>
+        {error ? <p className="error">{error}</p> : null}
       </section>
 
-      {/* Footer */}
-      <footer
-        style={{
-          textAlign: "center",
-          fontSize: "0.7rem",
-          color: "rgba(255,255,255,0.4)",
-          paddingBottom: "2rem",
-        }}
-      >
-        © {new Date().getFullYear()} Miami Design Shop — All rights reserved.
-      </footer>
+      <section className="panel">
+        <h2>Viewer output</h2>
+
+        {!loadedFile && !isLoading ? (
+          <EmptyState message="Select a Datasmith file to begin." />
+        ) : null}
+
+        {isLoading ? <EmptyState message="Parsing file…" /> : null}
+
+        {viewerData ? (
+          <>
+            <div className="stats-grid">
+              <Stat title="File size" value={formatBytes(viewerData.fileSize)} />
+              <Stat title="Encoding" value={viewerData.encoding} />
+              <Stat title="Total XML nodes" value={String(viewerData.totalElements)} />
+              <Stat title="Root tag" value={viewerData.rootTag} />
+            </div>
+
+            <div className="scene-metadata">
+              <h3>Scene attributes</h3>
+              {viewerData.rootAttributes.length ? (
+                <ul>
+                  {viewerData.rootAttributes.map((pair) => (
+                    <li key={pair.key}>
+                      <strong>{pair.key}</strong>: {pair.value}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="muted">No root attributes were found.</p>
+              )}
+            </div>
+
+            <div className="tags-header">
+              <h3>Top node types</h3>
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Filter tags (e.g. Actor, Mesh, Material)"
+              />
+            </div>
+
+            <table>
+              <thead>
+                <tr>
+                  <th>Tag</th>
+                  <th>Count</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredRows.map((item) => (
+                  <tr key={item.tag}>
+                    <td>{item.tag}</td>
+                    <td>{item.count}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {!filteredRows.length ? <p className="muted">No matching tags.</p> : null}
+
+            <h3>Raw preview (truncated)</h3>
+            <pre>{viewerData.rawPreview}</pre>
+          </>
+        ) : null}
+      </section>
+    </main>
+  );
+}
+
+function Stat({ title, value }) {
+  return (
+    <article className="stat">
+      <p>{title}</p>
+      <strong>{value}</strong>
+    </article>
+  );
+}
+
+function EmptyState({ message }) {
+  return (
+    <div className="empty">
+      <p>{message}</p>
     </div>
   );
 }
 
-function FeatureCard({ title, body, badge }) {
-  return (
-    <div
-      style={{
-        background:
-          "linear-gradient(160deg, rgba(255,255,255,0.07) 0%, rgba(0,0,0,0) 60%)",
-        border: "1px solid rgba(255,255,255,0.18)",
-        borderRadius: "16px",
-        padding: "1rem 1rem 1.25rem",
-        minHeight: "150px",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
-        position: "relative",
-        overflow: "hidden",
-      }}
-    >
-      <div
-        style={{
-          position: "absolute",
-          top: "0",
-          right: "0",
-          fontSize: "0.7rem",
-          lineHeight: 1,
-          padding: "0.4rem 0.6rem",
-          background:
-            "radial-gradient(circle at 0% 0%, rgba(120,60,255,0.6) 0%, rgba(0,0,0,0) 70%)",
-          color: "#fff",
-          borderBottomLeftRadius: "16px",
-          borderTopRightRadius: "16px",
-          fontWeight: 500,
-          letterSpacing: "0.05em",
-        }}
-      >
-        {badge}
-      </div>
+async function parseDatasmithFile(file) {
+  const buffer = await file.arrayBuffer();
+  const text = new TextDecoder("utf-8", { fatal: false }).decode(buffer);
 
-      <div style={{ fontWeight: 600, fontSize: "1rem", color: "#fff" }}>
-        {title}
-      </div>
-      <div
-        style={{
-          fontSize: "0.8rem",
-          lineHeight: 1.4,
-          color: "rgba(255,255,255,0.6)",
-          marginTop: "0.5rem",
-          maxWidth: "240px",
-        }}
-      >
-        {body}
-      </div>
-    </div>
-  );
+  const xmlStart = text.indexOf("<");
+  if (xmlStart < 0) {
+    throw new Error("This file does not look like XML and cannot be rendered in this viewer.");
+  }
+
+  const xmlText = text.slice(xmlStart).trim();
+  const parser = new DOMParser();
+  const parsed = parser.parseFromString(xmlText, "application/xml");
+
+  const parserError = parsed.querySelector("parsererror");
+  if (parserError) {
+    throw new Error(
+      "The selected file could not be parsed as valid XML. It may be binary or packed Datasmith data.",
+    );
+  }
+
+  const elements = Array.from(parsed.getElementsByTagName("*"));
+  const frequencies = elements.reduce((accumulator, element) => {
+    const key = element.tagName;
+    accumulator.set(key, (accumulator.get(key) || 0) + 1);
+    return accumulator;
+  }, new Map());
+
+  const topTags = Array.from(frequencies.entries())
+    .map(([tag, count]) => ({ tag, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 100);
+
+  const root = parsed.documentElement;
+  const rootAttributes = Array.from(root.attributes || []).map((attribute) => ({
+    key: attribute.name,
+    value: attribute.value,
+  }));
+
+  return {
+    fileSize: file.size,
+    encoding: detectEncoding(xmlText),
+    totalElements: elements.length,
+    rootTag: root.tagName,
+    rootAttributes,
+    topTags,
+    rawPreview: xmlText.slice(0, MAX_PREVIEW),
+  };
+}
+
+function detectEncoding(xmlText) {
+  const match = xmlText.match(/encoding\s*=\s*["']([^"']+)["']/i);
+  return match?.[1] || "utf-8 (assumed)";
+}
+
+function formatBytes(bytes) {
+  if (bytes === 0) {
+    return "0 B";
+  }
+
+  const units = ["B", "KB", "MB", "GB"];
+  const power = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+  const value = bytes / 1024 ** power;
+  return `${value.toFixed(value >= 10 ? 0 : 1)} ${units[power]}`;
 }
